@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"strconv"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -11,8 +12,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var TELEGRAM_BOT_TOKEN string
-var logger *log.Logger
+var (
+	TELEGRAM_BOT_TOKEN string
+	TELEGRAM_CHAT_ID   int64
+	logger             *log.Logger
+)
 
 func init() {
 	logger = log.NewWithOptions(os.Stderr, log.Options{
@@ -33,6 +37,18 @@ func init() {
 		logger.Error("Telegram Bot Token is not set.")
 		os.Exit(1)
 	}
+
+	chatIDStr := os.Getenv("TELEGRAM_CHAT_ID")
+	if chatIDStr == "" {
+		logger.Error("Telegram ChatID is not set.")
+		os.Exit(1)
+	}
+
+	TELEGRAM_CHAT_ID, err = strconv.ParseInt(chatIDStr, 10, 64)
+	if err != nil {
+		logger.Error("Invalid Telegram ChatID.", "Error", err)
+		os.Exit(1)
+	}
 }
 
 func main() {
@@ -40,7 +56,7 @@ func main() {
 	defer cancel()
 
 	opts := []bot.Option{
-		bot.WithDefaultHandler(defaultHandler),
+		bot.WithDefaultHandler(withChatIDCheck(defaultHandler)),
 	}
 
 	b, err := bot.New(TELEGRAM_BOT_TOKEN, opts...)
