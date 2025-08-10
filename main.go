@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"time"
 
+	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/charmbracelet/log"
 	"github.com/go-telegram/bot"
+	"github.com/go-telegram/bot/models"
 	"github.com/joho/godotenv"
 )
 
@@ -16,6 +18,7 @@ var (
 	TELEGRAM_BOT_TOKEN string
 	TELEGRAM_CHAT_ID   int64
 	logger             *log.Logger
+	chromaClient       chroma.Client
 )
 
 func init() {
@@ -49,11 +52,45 @@ func init() {
 		logger.Error("Invalid Telegram ChatID.", "Error", err)
 		os.Exit(1)
 	}
+
+}
+
+func connectToChroma(ctx context.Context) error {
+	client, err := chroma.NewHTTPClient()
+	if err != nil {
+		return err
+	}
+
+	opCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if err := client.PreFlight(opCtx); err != nil {
+		_ = client.Close()
+		return err
+	}
+	if err := client.Heartbeat(opCtx); err != nil {
+		_ = client.Close()
+		return err
+	}
+
+	chromaClient = client
+	logger.Info("ChromaDB connected and healthy.")
+	return nil
 }
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
+
+	if err := connectToChroma(ctx); err != nil {
+		logger.Error("Failed to connect to ChromaDB.", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := chromaClient.Close(); err != nil {
+			logger.Warn("Error closing ChromaDB client.", "error", err)
+		}
+	}()
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(withChatIDCheck(defaultHandler)),
@@ -64,6 +101,19 @@ func main() {
 		logger.Error("Error occured when starting bot.", "Error", err)
 		os.Exit(1)
 	}
+	_, err = b.SetMyCommands(ctx, &bot.SetMyCommandsParams{
+		Commands: []models.BotCommand{
+			{Command: "add_detail", Description: "Add detail about person"},
+			{Command: "add_moment", Description: "Add moment with person"},
+		},
+	})
+	if err != nil {
+		logger.Error("Error occured when setting commands.", "Error", err)
+		os.Exit(1)
+	}
+
+	b.RegisterHandler(bot.HandlerTypeMessageText, "add_detail", bot.MatchTypeCommandStartOnly, withChatIDCheck(addDetailHandler))
+	b.RegisterHandler(bot.HandlerTypeMessageText, "add_moment", bot.MatchTypeCommandStartOnly, withChatIDCheck(addMomentHandler))
 
 	b.Start(ctx)
 }
