@@ -93,10 +93,39 @@ func addDetailHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 }
 
 func addMomentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	chatID := update.Message.Chat.ID
-	logger.Info("Add Moment handler called.", "ChatID", chatID)
+	logger.Info("Add Moment handler called.")
+	userText := strings.TrimSpace(strings.TrimPrefix(update.Message.Text, "/add_moment"))
 
-	if _, err := b.SendMessage(ctx, buildMessageParams(chatID, "Add Moment Handler Yet To Be Implemented")); err != nil {
-		logger.Error("Send Message failed.", "ChatID", chatID, "Error", err)
+	if userText == "" {
+		sendMessageToUser(ctx, b, "Message is empty. Please try again.")
+		return
 	}
+
+	sendMessageToUser(ctx, b, "Adding new moment to chromadb.")
+
+	collection, err := getCollection(ctx, "moments")
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to access the moments collection.")
+		return
+	}
+
+	opCtx, cancel := context.WithTimeoutCause(ctx, 20*time.Second, errors.New("ChromaDB addToCollection timeout"))
+	defer cancel()
+
+	err = collection.Add(
+		opCtx,
+		chroma.WithIDGenerator(chroma.NewULIDGenerator()),
+		chroma.WithTexts(userText),
+		chroma.WithMetadatas(
+			chroma.NewDocumentMetadata(chroma.NewStringAttribute("tag", "moment")),
+		),
+	)
+	if err != nil {
+		logger.Error("ChromaDB failed to add to collection.", "Error", err)
+		sendMessageToUser(ctx, b, "Sorry, failed to add moment to collection.")
+		return
+	}
+
+	sendMessageToUser(ctx, b, "Amazing news! Moment has been memorized forever!")
+	logger.Info("Add Moment handler finished successfully.", "Moment added", userText)
 }
