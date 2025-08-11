@@ -5,10 +5,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - IS_PERSISTENT=TRUE
-      - PERSIST_DIRECTORY=/chroma/chroma
+      - CHROMA_IS_PERSISTENT=TRUE
     volumes:
-      - ./chromadb:/chroma/chroma
+      - ./chromadb:/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v2/heartbeat"]
       interval: 10s
