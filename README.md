@@ -7,7 +7,7 @@ A tiny Telegram bot you feed with **moments** and **details** about your partner
 
 ## How it works (high level)
 
-* You DM the bot things like `/add_detail She loves pistachio gelato` or `/add_moment Our first beach walk in Diani`.
+* You DM the bot things like `/add_detail She loves pistachio gelato` or `/add_moment Our first beach walk in Tasmania`.
 * The bot saves each entry into **ChromaDB** (running locally via Docker).
 * Later (to be implemented), a scheduler will:
 
@@ -49,7 +49,8 @@ DATABASE_NAME=
 
 * `/add_detail <text>` — saves a small fact or preference
   *Example:* `/add_detail She prefers window seats on flights`
-* `/add_moment <text>` — saves a memory or event (stubbed for now; wiring follows)
+* `/add_moment <text>` — saves a memory or event
+  *Example:* `/add_moment That look across the room at the museum when we both knew we hated it there`
 * `<text>` — any other message triggers the default handler which gets relevant details and moments and (soon) will generate a response using an LLM.
 
 ---
