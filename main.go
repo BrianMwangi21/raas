@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/signal"
 	"strconv"
@@ -17,6 +18,8 @@ import (
 var (
 	TELEGRAM_BOT_TOKEN string
 	TELEGRAM_CHAT_ID   int64
+	TENANT_NAME        string
+	DATABASE_NAME      string
 	logger             *log.Logger
 	chromaClient       chroma.Client
 )
@@ -53,6 +56,17 @@ func init() {
 		os.Exit(1)
 	}
 
+	TENANT_NAME = os.Getenv("TENANT_NAME")
+	if TENANT_NAME == "" {
+		logger.Error("Tenant Name is not set.")
+		os.Exit(1)
+	}
+
+	DATABASE_NAME = os.Getenv("DATABASE_NAME")
+	if DATABASE_NAME == "" {
+		logger.Error("Database Name is not set.")
+		os.Exit(1)
+	}
 }
 
 func connectToChroma(ctx context.Context) error {
@@ -61,7 +75,7 @@ func connectToChroma(ctx context.Context) error {
 		return err
 	}
 
-	opCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	opCtx, cancel := context.WithTimeoutCause(ctx, 30*time.Second, errors.New("ChromaDB setup timeout"))
 	defer cancel()
 
 	if err := client.PreFlight(opCtx); err != nil {
@@ -73,8 +87,21 @@ func connectToChroma(ctx context.Context) error {
 		return err
 	}
 
+	// Set fixed tenant and database
+	tenant := chroma.NewTenant(TENANT_NAME)
+	if err := client.UseTenant(opCtx, tenant); err != nil {
+		_ = client.Close()
+		return err
+	}
+
+	db := chroma.NewDatabase(DATABASE_NAME, tenant)
+	if err := client.UseDatabase(opCtx, db); err != nil {
+		_ = client.Close()
+		return err
+	}
+
 	chromaClient = client
-	logger.Info("ChromaDB connected and healthy.")
+	logger.Info("ChromaDB connected, tenant/db selected, collections ready.")
 	return nil
 }
 
@@ -88,7 +115,7 @@ func main() {
 	}
 	defer func() {
 		if err := chromaClient.Close(); err != nil {
-			logger.Warn("Error closing ChromaDB client.", "error", err)
+			logger.Error("Error closing ChromaDB client.", "error", err)
 		}
 	}()
 

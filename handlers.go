@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"time"
 
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
@@ -11,9 +13,17 @@ import (
 
 func buildMessageParams(chatID int64, message string) *bot.SendMessageParams {
 	return &bot.SendMessageParams{
-		ChatID:    chatID,
-		Text:      message,
-		ParseMode: models.ParseModeMarkdown,
+		ChatID: chatID,
+		Text:   message,
+	}
+}
+
+func sendMessageToUser(ctx context.Context, b *bot.Bot, message string) {
+	sendCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	if _, err := b.SendMessage(sendCtx, buildMessageParams(TELEGRAM_CHAT_ID, message)); err != nil {
+		logger.Error("Send Message failed.", "Error", err, "Message", message)
 	}
 }
 
@@ -26,8 +36,11 @@ func withChatIDCheck(next bot.HandlerFunc) bot.HandlerFunc {
 		chatID := update.Message.Chat.ID
 
 		if chatID != TELEGRAM_CHAT_ID {
+			// We use chatID here cause it could be different from the one set in the env
+			// And we want to shun them off. Don't see how this could ever happen though
+			// But it's a good gate!
 			b.SendMessage(ctx, buildMessageParams(chatID, "Sorry, we can't dance together 💃🕺"))
-			logger.Warn("Blocked message from unauthorized chat.", "ChatID", chatID)
+			logger.Error("Blocked message from unauthorized chat.", "ChatID", chatID)
 			return
 		}
 
@@ -37,47 +50,46 @@ func withChatIDCheck(next bot.HandlerFunc) bot.HandlerFunc {
 }
 
 func defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	chatID := update.Message.Chat.ID
-	logger.Info("Default handler called.", "ChatID", chatID)
-
-	if _, err := b.SendMessage(ctx, buildMessageParams(chatID, "Welcome to RAAS")); err != nil {
-		logger.Error("Send Message failed.", "ChatID", chatID, "Error", err)
-	}
+	logger.Info("Default handler called.")
+	sendMessageToUser(ctx, b, "Welcome to RAAS!")
 }
 
 func addDetailHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	chatID := update.Message.Chat.ID
-	userText := update.Message.Text
+	logger.Info("Add Detail handler called.")
+	userText := strings.TrimSpace(strings.TrimPrefix(update.Message.Text, "/add_detail"))
 
-	logger.Info("Add Detail handler called.", "ChatID", chatID)
-
-	if _, err := b.SendMessage(ctx, buildMessageParams(chatID, "Adding new detail to chromadb")); err != nil {
-		logger.Error("Send Message failed.", "ChatID", chatID, "Error", err)
+	if userText == "" {
+		sendMessageToUser(ctx, b, "Message is empty. Please try again.")
+		return
 	}
 
-	opCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	sendMessageToUser(ctx, b, "Adding new detail to chromadb.")
+
+	collection, err := getCollection(ctx, "details")
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to access the details collection.")
+		return
+	}
+
+	opCtx, cancel := context.WithTimeoutCause(ctx, 20*time.Second, errors.New("ChromaDB addToCollection timeout"))
 	defer cancel()
 
-	// Get or create the 'details' collection
-	col, err := chromaClient.GetOrCreateCollection(opCtx, "details")
-	if err != nil {
-		logger.Error("GetOrCreateCollection failed", "error", err)
-		b.SendMessage(ctx, buildMessageParams(chatID, "Sorry, failed to access the details collection"))
-	}
-
-	err = col.Add(
+	err = collection.Add(
 		opCtx,
 		chroma.WithIDGenerator(chroma.NewULIDGenerator()),
 		chroma.WithTexts(userText),
 		chroma.WithMetadatas(
-			chroma.NewDocumentMetadata(
-				chroma.NewStringAttribute("str", "details"),
-			)),
+			chroma.NewDocumentMetadata(chroma.NewStringAttribute("tag", "detail")),
+		),
 	)
 	if err != nil {
-		logger.Error("Add to collection failed", "error", err)
-		b.SendMessage(ctx, buildMessageParams(chatID, "Sorry, failed to add to the details collection"))
+		logger.Error("ChromaDB failed to add to collection.", "Error", err)
+		sendMessageToUser(ctx, b, "Sorry, failed to add detail to collection.")
+		return
 	}
+
+	sendMessageToUser(ctx, b, "Amazing news! Detail has been memorized forever!")
+	logger.Info("Add Detail handler finished successfully.", "Detail added", userText)
 }
 
 func addMomentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
