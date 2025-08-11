@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -51,7 +52,29 @@ func withChatIDCheck(next bot.HandlerFunc) bot.HandlerFunc {
 
 func defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	logger.Info("Default handler called.")
-	sendMessageToUser(ctx, b, "Welcome to RAAS!")
+	userText := strings.TrimSpace(update.Message.Text)
+
+	if userText == "" {
+		sendMessageToUser(ctx, b, "Message is empty. Please try again.")
+		return
+	}
+
+	sendMessageToUser(ctx, b, "Querying chromadb.")
+
+	detailsResult, err := queryCollection(ctx, "details", userText)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to query the details collection.")
+	}
+	logger.Info("Queried details collection.", "Result", detailsResult)
+
+	momentsResult, err := queryCollection(ctx, "moments", userText)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to query the moments collection.")
+	}
+	logger.Info("Queried moments collection.", "Result", momentsResult)
+
+	response := fmt.Sprintf("Got the following results:\bDetails: %s\bMoments: %s", detailsResult, momentsResult)
+	sendMessageToUser(ctx, b, response)
 }
 
 func addDetailHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
@@ -74,15 +97,14 @@ func addDetailHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	opCtx, cancel := context.WithTimeoutCause(ctx, 20*time.Second, errors.New("ChromaDB addToCollection timeout"))
 	defer cancel()
 
-	err = collection.Add(
+	if err = collection.Add(
 		opCtx,
 		chroma.WithIDGenerator(chroma.NewULIDGenerator()),
 		chroma.WithTexts(userText),
 		chroma.WithMetadatas(
 			chroma.NewDocumentMetadata(chroma.NewStringAttribute("tag", "detail")),
 		),
-	)
-	if err != nil {
+	); err != nil {
 		logger.Error("ChromaDB failed to add to collection.", "Error", err)
 		sendMessageToUser(ctx, b, "Sorry, failed to add detail to collection.")
 		return
@@ -112,15 +134,14 @@ func addMomentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	opCtx, cancel := context.WithTimeoutCause(ctx, 20*time.Second, errors.New("ChromaDB addToCollection timeout"))
 	defer cancel()
 
-	err = collection.Add(
+	if err = collection.Add(
 		opCtx,
 		chroma.WithIDGenerator(chroma.NewULIDGenerator()),
 		chroma.WithTexts(userText),
 		chroma.WithMetadatas(
 			chroma.NewDocumentMetadata(chroma.NewStringAttribute("tag", "moment")),
 		),
-	)
-	if err != nil {
+	); err != nil {
 		logger.Error("ChromaDB failed to add to collection.", "Error", err)
 		sendMessageToUser(ctx, b, "Sorry, failed to add moment to collection.")
 		return
