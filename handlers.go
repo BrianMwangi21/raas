@@ -65,13 +65,13 @@ func defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	if err != nil {
 		sendMessageToUser(ctx, b, "Sorry, failed to query the details collection.")
 	}
-	logger.Info("Queried details collection.", "Result", detailsResult)
+	logger.Info("Queried details collection.", "Result", detailsResult, "ResultCount", len(detailsResult))
 
 	momentsResult, err := queryCollection(ctx, "moments", userText)
 	if err != nil {
 		sendMessageToUser(ctx, b, "Sorry, failed to query the moments collection.")
 	}
-	logger.Info("Queried moments collection.", "Result", momentsResult)
+	logger.Info("Queried moments collection.", "Result", momentsResult, "ResultCount", len(momentsResult))
 
 	response := fmt.Sprintf("Got the following results:\bDetails: %s\bMoments: %s", detailsResult, momentsResult)
 	sendMessageToUser(ctx, b, response)
