@@ -9,6 +9,7 @@ import (
 	"time"
 
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
+	"github.com/go-telegram/bot"
 	"github.com/openai/openai-go"
 )
 
@@ -59,33 +60,6 @@ func queryCollection(ctx context.Context, collectionName string, userText string
 	}
 
 	return results, nil
-}
-
-func bulletize(items []string, max int) string {
-	if len(items) == 0 {
-		return "• (none)\n"
-	}
-	if max > 0 && len(items) > max {
-		items = items[:max]
-	}
-	var b strings.Builder
-	for _, it := range items {
-		line := strings.TrimSpace(it)
-		if line == "" {
-			continue
-		}
-		if len(line) > 300 {
-			line = line[:300] + "…"
-		}
-		b.WriteString("• ")
-		b.WriteString(line)
-		b.WriteString("\n")
-	}
-	out := b.String()
-	if out == "" {
-		return "• (none)\n"
-	}
-	return out
 }
 
 func generateChatResponse(ctx context.Context, details []string, moments []string, userText string) (string, error) {
@@ -198,4 +172,55 @@ func generateRandomNuggetResponse(ctx context.Context, detail string, moment str
 	}
 
 	return strings.TrimSpace(response.Choices[0].Message.Content), nil
+}
+
+func bulletize(items []string, max int) string {
+	if len(items) == 0 {
+		return "• (none)\n"
+	}
+	if max > 0 && len(items) > max {
+		items = items[:max]
+	}
+	var b strings.Builder
+	for _, it := range items {
+		line := strings.TrimSpace(it)
+		if line == "" {
+			continue
+		}
+		if len(line) > 300 {
+			line = line[:300] + "…"
+		}
+		b.WriteString("• ")
+		b.WriteString(line)
+		b.WriteString("\n")
+	}
+	out := b.String()
+	if out == "" {
+		return "• (none)\n"
+	}
+	return out
+}
+
+func startTopOfHourScheduler(ctx context.Context, b *bot.Bot) {
+	go func() {
+		for {
+			now := time.Now().UTC()
+			next := now.Truncate(time.Hour).Add(time.Hour) // next top of hour in UTC
+			wait := time.Until(next)
+
+			logger.Info("Next random nugget (UTC).", "at", next.Format(time.RFC3339), "in", wait.String())
+
+			timer := time.NewTimer(wait)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				logger.Info("Top-of-hour scheduler stopped.")
+				return
+			case <-timer.C:
+				runCtx, cancel := context.WithTimeout(ctx, 45*time.Second)
+				randomNuggetHandler(runCtx, b)
+				cancel()
+			}
+		}
+	}()
 }
