@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
+	"math/big"
 	"strings"
 	"time"
 
@@ -86,16 +88,16 @@ func bulletize(items []string, max int) string {
 	return out
 }
 
-func generateChatResponse(ctx context.Context, detailsResult []string, momentsResult []string, userText string) (string, error) {
+func generateChatResponse(ctx context.Context, details []string, moments []string, userText string) (string, error) {
 	logger.Info("Generating chat response.")
 
 	userMsg := &strings.Builder{}
 	userMsg.WriteString("User text:\n")
 	userMsg.WriteString(userText)
 	userMsg.WriteString("\n\nKnown Details:\n")
-	userMsg.WriteString(bulletize(detailsResult, 20))
+	userMsg.WriteString(bulletize(details, 20))
 	userMsg.WriteString("\nShared Moments:\n")
-	userMsg.WriteString(bulletize(momentsResult, 20))
+	userMsg.WriteString(bulletize(moments, 20))
 
 	logger.Info("Created user message.", "User Message to AI", userMsg.String())
 
@@ -106,10 +108,83 @@ func generateChatResponse(ctx context.Context, detailsResult []string, momentsRe
 		opCtx,
 		openai.ChatCompletionNewParams{
 			Messages: []openai.ChatCompletionMessageParamUnion{
-				openai.SystemMessage(systemPrompt),
+				openai.SystemMessage(systemChatResponsePrompt),
 				openai.UserMessage(userMsg.String()),
 			},
 			Temperature: openai.Float(0.7),
+			Model:       openai.ChatModelGPT4_1Nano,
+		},
+	)
+	if err != nil {
+		logger.Error("OpenAI failed generation.", "Error", err)
+		return "", err
+	}
+
+	if len(response.Choices) == 0 {
+		return "Unfortunately, there's no response from OpenAI", nil
+	}
+
+	return strings.TrimSpace(response.Choices[0].Message.Content), nil
+}
+
+func getRandomCollectionEntry(ctx context.Context, collectionName string) (string, error) {
+	collection, err := getCollection(ctx, collectionName)
+	if err != nil {
+		return "", err
+	}
+
+	countCtx, countCancel := context.WithTimeoutCause(ctx, 10*time.Second, errors.New("ChromaDB getCount timeout"))
+	defer countCancel()
+
+	total, err := collection.Count(countCtx)
+	if err != nil {
+		logger.Error("ChromaDB failed to get count.", "Error", err)
+		return "", err
+	}
+
+	nBig, _ := rand.Int(rand.Reader, big.NewInt(int64(total)))
+	offset := int(nBig.Int64())
+
+	opCtx, cancel := context.WithTimeoutCause(ctx, 30*time.Second, errors.New("ChromaDB get timeout"))
+	defer cancel()
+
+	get, err := collection.Get(
+		opCtx,
+		chroma.WithOffsetGet(offset),
+		chroma.WithIncludeGet(chroma.IncludeDocuments, chroma.IncludeMetadatas),
+		chroma.WithLimitGet(1),
+	)
+	if err != nil {
+		logger.Error("ChromaDB failed to get entry at offset.", "Error", err)
+		return "", err
+	}
+
+	docsGroup := get.GetDocuments()
+	return docsGroup[0].ContentString(), nil
+}
+
+func generateRandomNuggetResponse(ctx context.Context, detail string, moment string) (string, error) {
+	logger.Info("Generating chat response.")
+
+	userMsg := &strings.Builder{}
+	userMsg.WriteString("\n\nKnown Detail:\n")
+	userMsg.WriteString(detail)
+	userMsg.WriteString("\nShared Moment:\n")
+	userMsg.WriteString(moment)
+
+	logger.Info("Created user message.", "User Message to AI", userMsg.String())
+
+	opCtx, cancel := context.WithTimeoutCause(ctx, 30*time.Second, errors.New("OpenAI generation timeout"))
+	defer cancel()
+
+	response, err := openaiClient.Chat.Completions.New(
+		opCtx,
+		openai.ChatCompletionNewParams{
+			Messages: []openai.ChatCompletionMessageParamUnion{
+				openai.SystemMessage(systemRandomNuggetPrompt),
+				openai.UserMessage(userMsg.String()),
+			},
+			Temperature: openai.Float(0.8),
 			Model:       openai.ChatModelGPT4_1Nano,
 		},
 	)

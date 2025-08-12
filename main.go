@@ -145,5 +145,8 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeMessageText, "add_detail", bot.MatchTypeCommandStartOnly, withChatIDCheck(addDetailHandler))
 	b.RegisterHandler(bot.HandlerTypeMessageText, "add_moment", bot.MatchTypeCommandStartOnly, withChatIDCheck(addMomentHandler))
 
+	// Get random nugget and send to chat
+	randomNuggetHandler(ctx, b)
+
 	b.Start(ctx)
 }

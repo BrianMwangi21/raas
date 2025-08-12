@@ -155,3 +155,28 @@ func addMomentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	sendMessageToUser(ctx, b, "Amazing news! Moment has been memorized forever!")
 	logger.Info("Add Moment handler finished successfully.", "Moment added", userText)
 }
+
+func randomNuggetHandler(ctx context.Context, b *bot.Bot) {
+	logger.Info("Random Nugget Handler called.")
+
+	detailsResult, err := getRandomCollectionEntry(ctx, "details")
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to query the details collection.")
+	}
+	logger.Info("Queried random details collection.", "Result", detailsResult)
+
+	momentsResult, err := getRandomCollectionEntry(ctx, "moments")
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to query the moments collection.")
+	}
+	logger.Info("Queried random moments collection.", "Result", momentsResult)
+
+	response, err := generateRandomNuggetResponse(ctx, detailsResult, momentsResult)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to generate chat response.")
+		return
+	}
+	logger.Info("Generated Chat Response.", "Response", response)
+
+	sendMessageToUser(ctx, b, response)
+}
