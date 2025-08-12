@@ -13,15 +13,8 @@ import (
 	"github.com/go-telegram/bot"
 	"github.com/go-telegram/bot/models"
 	"github.com/joho/godotenv"
-)
-
-var (
-	TELEGRAM_BOT_TOKEN string
-	TELEGRAM_CHAT_ID   int64
-	TENANT_NAME        string
-	DATABASE_NAME      string
-	logger             *log.Logger
-	chromaClient       chroma.Client
+	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
 )
 
 func init() {
@@ -56,6 +49,12 @@ func init() {
 		os.Exit(1)
 	}
 
+	OPENAI_API_KEY = os.Getenv("OPENAI_API_KEY")
+	if OPENAI_API_KEY == "" {
+		logger.Error("OPENAI_API_KEY is not set.")
+		os.Exit(1)
+	}
+
 	TENANT_NAME = os.Getenv("TENANT_NAME")
 	if TENANT_NAME == "" {
 		logger.Error("Tenant Name is not set.")
@@ -69,7 +68,7 @@ func init() {
 	}
 }
 
-func connectToChroma(ctx context.Context) error {
+func initializeChromaClient(ctx context.Context) error {
 	client, err := chroma.NewHTTPClient()
 	if err != nil {
 		return err
@@ -109,7 +108,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	if err := connectToChroma(ctx); err != nil {
+	if err := initializeChromaClient(ctx); err != nil {
 		logger.Error("Failed to connect to ChromaDB.", "error", err)
 		os.Exit(1)
 	}
@@ -118,6 +117,10 @@ func main() {
 			logger.Error("Error closing ChromaDB client.", "error", err)
 		}
 	}()
+
+	openaiClient = openai.NewClient(
+		option.WithAPIKey(OPENAI_API_KEY),
+	)
 
 	opts := []bot.Option{
 		bot.WithDefaultHandler(withChatIDCheck(defaultHandler)),

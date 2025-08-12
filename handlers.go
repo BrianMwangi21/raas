@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -73,7 +72,13 @@ func defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	}
 	logger.Info("Queried moments collection.", "Result", momentsResult, "ResultCount", len(momentsResult))
 
-	response := fmt.Sprintf("Got the following results:\bDetails: %s\bMoments: %s", detailsResult, momentsResult)
+	response, err := generateChatResponse(ctx, detailsResult, momentsResult, userText)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to generate chat response.")
+		return
+	}
+	logger.Info("Generated Chat Response.", "Response", response)
+
 	sendMessageToUser(ctx, b, response)
 }
 
