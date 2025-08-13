@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -178,5 +179,7 @@ func randomNuggetHandler(ctx context.Context, b *bot.Bot) {
 	}
 	logger.Info("Generated Chat Response.", "Response", response)
 
+	infoMsg := fmt.Sprintf("Getting random nugget from:\nDetail:%s\nMoment:%s", detailsResult, momentsResult)
+	sendMessageToUser(ctx, b, infoMsg)
 	sendMessageToUser(ctx, b, response)
 }
