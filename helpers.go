@@ -75,7 +75,7 @@ func generateChatResponse(ctx context.Context, details []string, moments []strin
 
 	logger.Info("Created user message.", "User Message to AI", userMsg.String())
 
-	opCtx, cancel := context.WithTimeoutCause(ctx, 30*time.Second, errors.New("OpenAI generation timeout"))
+	opCtx, cancel := context.WithTimeoutCause(ctx, 1*time.Minute, errors.New("OpenAI generation timeout"))
 	defer cancel()
 
 	response, err := openaiClient.Chat.Completions.New(
@@ -118,7 +118,7 @@ func getRandomCollectionEntry(ctx context.Context, collectionName string) (strin
 	nBig, _ := rand.Int(rand.Reader, big.NewInt(int64(total)))
 	offset := int(nBig.Int64())
 
-	opCtx, cancel := context.WithTimeoutCause(ctx, 30*time.Second, errors.New("ChromaDB get timeout"))
+	opCtx, cancel := context.WithTimeoutCause(ctx, 1*time.Minute, errors.New("ChromaDB get timeout"))
 	defer cancel()
 
 	get, err := collection.Get(
