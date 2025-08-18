@@ -10,7 +10,7 @@ import (
 
 	chroma "github.com/amikos-tech/chroma-go/pkg/api/v2"
 	"github.com/go-telegram/bot"
-	"github.com/openai/openai-go"
+	"github.com/openai/openai-go/v2"
 )
 
 func getCollection(ctx context.Context, collectionName string) (chroma.Collection, error) {
@@ -39,7 +39,7 @@ func queryCollection(ctx context.Context, collectionName string, userText string
 		opCtx,
 		chroma.WithQueryTexts(userText),
 		chroma.WithIncludeQuery(chroma.IncludeDocuments, chroma.IncludeMetadatas),
-		chroma.WithNResults(2),
+		chroma.WithNResults(3),
 	)
 	if err != nil {
 		logger.Error("ChromaDB failed to query collection.", "Error", err)
@@ -85,8 +85,7 @@ func generateChatResponse(ctx context.Context, details []string, moments []strin
 				openai.SystemMessage(systemChatResponsePrompt),
 				openai.UserMessage(userMsg.String()),
 			},
-			Temperature: openai.Float(0.7),
-			Model:       openai.ChatModelGPT4_1Nano,
+			Model: openai.ChatModelGPT5Nano,
 		},
 	)
 	if err != nil {
@@ -158,8 +157,7 @@ func generateRandomNuggetResponse(ctx context.Context, detail string, moment str
 				openai.SystemMessage(systemRandomNuggetPrompt),
 				openai.UserMessage(userMsg.String()),
 			},
-			Temperature: openai.Float(0.8),
-			Model:       openai.ChatModelGPT4_1Nano,
+			Model: openai.ChatModelGPT5Nano,
 		},
 	)
 	if err != nil {

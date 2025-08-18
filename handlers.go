@@ -50,39 +50,6 @@ func withChatIDCheck(next bot.HandlerFunc) bot.HandlerFunc {
 	}
 }
 
-func defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
-	logger.Info("Default handler called.")
-	userText := strings.TrimSpace(update.Message.Text)
-
-	if userText == "" {
-		sendMessageToUser(ctx, b, "Message is empty. Please try again.")
-		return
-	}
-
-	sendMessageToUser(ctx, b, "Querying chromadb.")
-
-	detailsResult, err := queryCollection(ctx, "details", userText)
-	if err != nil {
-		sendMessageToUser(ctx, b, "Sorry, failed to query the details collection.")
-	}
-	logger.Info("Queried details collection.", "Result", detailsResult, "ResultCount", len(detailsResult))
-
-	momentsResult, err := queryCollection(ctx, "moments", userText)
-	if err != nil {
-		sendMessageToUser(ctx, b, "Sorry, failed to query the moments collection.")
-	}
-	logger.Info("Queried moments collection.", "Result", momentsResult, "ResultCount", len(momentsResult))
-
-	response, err := generateChatResponse(ctx, detailsResult, momentsResult, userText)
-	if err != nil {
-		sendMessageToUser(ctx, b, "Sorry, failed to generate chat response.")
-		return
-	}
-	logger.Info("Generated Chat Response.", "Response", response)
-
-	sendMessageToUser(ctx, b, response)
-}
-
 func addDetailHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 	logger.Info("Add Detail handler called.")
 	userText := strings.TrimSpace(strings.TrimPrefix(update.Message.Text, "/add_detail"))
@@ -155,6 +122,39 @@ func addMomentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 
 	sendMessageToUser(ctx, b, "Amazing news! Moment has been memorized forever!")
 	logger.Info("Add Moment handler finished successfully.", "Moment added", userText)
+}
+
+func defaultHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
+	logger.Info("Default handler called.")
+	userText := strings.TrimSpace(update.Message.Text)
+
+	if userText == "" {
+		sendMessageToUser(ctx, b, "Message is empty. Please try again.")
+		return
+	}
+
+	sendMessageToUser(ctx, b, "Querying chromadb.")
+
+	detailsResult, err := queryCollection(ctx, "details", userText)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to query the details collection.")
+	}
+	logger.Info("Queried details collection.", "Result", detailsResult, "ResultCount", len(detailsResult))
+
+	momentsResult, err := queryCollection(ctx, "moments", userText)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to query the moments collection.")
+	}
+	logger.Info("Queried moments collection.", "Result", momentsResult, "ResultCount", len(momentsResult))
+
+	response, err := generateChatResponse(ctx, detailsResult, momentsResult, userText)
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to generate chat response.")
+		return
+	}
+	logger.Info("Generated Chat Response.", "Response", response)
+
+	sendMessageToUser(ctx, b, response)
 }
 
 func randomNuggetHandler(ctx context.Context, b *bot.Bot) {
