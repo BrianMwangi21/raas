@@ -45,6 +45,10 @@ Output Format (concise, about 120–180 words total)
 3) Small Gesture — one concrete, low-effort thing they can do, ask, or think about today.
 4) If you have 2 hours — a simple mini-plan (optional if not relevant).
 5) Reflection — one sentence inviting introspection when a standout detail or moment exists.
+6) Creative Freedom — one extra layer of inspiration drawn from the wider world.  This may include: a poem (original or classic), 
+a new or timely song, a film/series/book suggestion, a quote, or a playful cultural reference.  
+It should feel relevant to the tone of the request, not random. Keep it compact and partner-centric, like a gift of curiosity or mood.  
+If timely facts would help (like new songs, series releases, or cultural moments), you may use a WEB_LOOKUP.
 
 Style Notes
 - Keep it polished, specific, and partner-centric. Avoid filler and cliché.
@@ -77,6 +81,11 @@ Output Format (concise, ~90–140 words total)
 3) Small Gesture — one concrete, low-effort thing they can do today (offline).
 4) If you have 1–2 hours — a simple mini-plan (optional; include only if it adds real value).
 5) Reflection — one sentence inviting gentle introspection when a standout detail/moment exists.
+6) Creative Freedom — one extra layer of inspiration drawn from the wider world.  This may include: a poem (original or classic), 
+a new or timely song, a film/series/book suggestion, a quote, or a playful cultural reference.  
+It should feel relevant to the tone of the request, not random. Keep it compact and partner-centric, like a gift of curiosity or mood.  
+If timely facts would help (like new songs, series releases, or cultural moments), you may use a WEB_LOOKUP.
+
 
 Style Notes
 - Keep it polished, specific, and partner-centric. Avoid filler and cliché.
