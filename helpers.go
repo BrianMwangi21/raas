@@ -85,7 +85,8 @@ func generateChatResponse(ctx context.Context, details []string, moments []strin
 				openai.SystemMessage(systemChatResponsePrompt),
 				openai.UserMessage(userMsg.String()),
 			},
-			Model: openai.ChatModelGPT5Nano,
+			Model:       openai.ChatModelGPT4_1Nano,
+			Temperature: openai.Float(0.85),
 		},
 	)
 	if err != nil {
@@ -147,7 +148,7 @@ func generateRandomNuggetResponse(ctx context.Context, detail string, moment str
 
 	logger.Info("Created user message.", "User Message to AI", userMsg.String())
 
-	opCtx, cancel := context.WithTimeoutCause(ctx, 30*time.Second, errors.New("OpenAI generation timeout"))
+	opCtx, cancel := context.WithTimeoutCause(ctx, 1*time.Minute, errors.New("OpenAI generation timeout"))
 	defer cancel()
 
 	response, err := openaiClient.Chat.Completions.New(
@@ -157,7 +158,8 @@ func generateRandomNuggetResponse(ctx context.Context, detail string, moment str
 				openai.SystemMessage(systemRandomNuggetPrompt),
 				openai.UserMessage(userMsg.String()),
 			},
-			Model: openai.ChatModelGPT5Nano,
+			Model:       openai.ChatModelGPT4_1Nano,
+			Temperature: openai.Float(0.85),
 		},
 	)
 	if err != nil {
