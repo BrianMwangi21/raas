@@ -201,11 +201,18 @@ func bulletize(items []string, max int) string {
 	return out
 }
 
-func startTopOfHourScheduler(ctx context.Context, b *bot.Bot) {
+func startThreeHourScheduler(ctx context.Context, b *bot.Bot) {
 	go func() {
 		for {
 			now := time.Now().UTC()
-			next := now.Truncate(time.Hour).Add(time.Hour) // next top of hour in UTC
+			hours := now.Hour()
+			nextHours := ((hours / 3) + 1) * 3
+			var next time.Time
+			if nextHours >= 24 {
+				next = now.Truncate(24*time.Hour).AddDate(0, 0, 1)
+			} else {
+				next = now.Truncate(24 * time.Hour).Add(time.Duration(nextHours) * time.Hour)
+			}
 			wait := time.Until(next)
 
 			logger.Info("Next random nugget (UTC).", "at", next.Format(time.RFC3339), "in", wait.String())
@@ -214,7 +221,7 @@ func startTopOfHourScheduler(ctx context.Context, b *bot.Bot) {
 			select {
 			case <-ctx.Done():
 				timer.Stop()
-				logger.Info("Top-of-hour scheduler stopped.")
+				logger.Info("Three-hour scheduler stopped.")
 				return
 			case <-timer.C:
 				runCtx, cancel := context.WithTimeout(ctx, 45*time.Second)

@@ -145,8 +145,7 @@ func main() {
 	b.RegisterHandler(bot.HandlerTypeMessageText, "add_detail", bot.MatchTypeCommandStartOnly, withChatIDCheck(addDetailHandler))
 	b.RegisterHandler(bot.HandlerTypeMessageText, "add_moment", bot.MatchTypeCommandStartOnly, withChatIDCheck(addMomentHandler))
 
-	// Start go routine for top of the hour updates
-	startTopOfHourScheduler(ctx, b)
+	startThreeHourScheduler(ctx, b)
 
 	b.Start(ctx)
 }
