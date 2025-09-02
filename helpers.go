@@ -101,6 +101,43 @@ func generateChatResponse(ctx context.Context, details []string, moments []strin
 	return strings.TrimSpace(response.Choices[0].Message.Content), nil
 }
 
+func generateMomentOrDetailResponse(ctx context.Context, userText string, typeOfUserText string) (string, error) {
+	logger.Info("Generating moment or detail response.")
+
+	userMsg := &strings.Builder{}
+	userMsg.WriteString("User text:\n")
+	userMsg.WriteString(userText)
+	userMsg.WriteString("\n\nType:\n")
+	userMsg.WriteString(typeOfUserText)
+
+	logger.Info("Created user message.", "User Message to AI", userMsg.String())
+
+	opCtx, cancel := context.WithTimeoutCause(ctx, 1*time.Minute, errors.New("OpenAI generation timeout"))
+	defer cancel()
+
+	response, err := openaiClient.Chat.Completions.New(
+		opCtx,
+		openai.ChatCompletionNewParams{
+			Messages: []openai.ChatCompletionMessageParamUnion{
+				openai.SystemMessage(systemMomentOrDetailPrompt),
+				openai.UserMessage(userMsg.String()),
+			},
+			Model:       openai.ChatModelGPT4_1Nano,
+			Temperature: openai.Float(0.85),
+		},
+	)
+	if err != nil {
+		logger.Error("OpenAI failed generation.", "Error", err)
+		return "", err
+	}
+
+	if len(response.Choices) == 0 {
+		return "Unfortunately, there's no response from OpenAI", nil
+	}
+
+	return strings.TrimSpace(response.Choices[0].Message.Content), nil
+}
+
 func getRandomCollectionEntry(ctx context.Context, collectionName string) (string, error) {
 	collection, err := getCollection(ctx, collectionName)
 	if err != nil {
@@ -138,7 +175,7 @@ func getRandomCollectionEntry(ctx context.Context, collectionName string) (strin
 }
 
 func generateRandomNuggetResponse(ctx context.Context, detail string, moment string) (string, error) {
-	logger.Info("Generating chat response.")
+	logger.Info("Generating random nugget response.")
 
 	userMsg := &strings.Builder{}
 	userMsg.WriteString("\n\nKnown Detail:\n")

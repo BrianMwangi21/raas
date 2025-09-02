@@ -83,7 +83,15 @@ func addDetailHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 		return
 	}
 
+	response, err := generateMomentOrDetailResponse(ctx, userText, "detail")
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to generate moment/detail ruminations response.")
+		return
+	}
+	logger.Info("Generated Detail Rumination Response.", "Response", response)
+
 	sendMessageToUser(ctx, b, "Amazing news! Detail has been memorized forever!")
+	sendMessageToUser(ctx, b, response)
 	logger.Info("Add Detail handler finished successfully.", "Detail added", userText)
 }
 
@@ -120,7 +128,15 @@ func addMomentHandler(ctx context.Context, b *bot.Bot, update *models.Update) {
 		return
 	}
 
+	response, err := generateMomentOrDetailResponse(ctx, userText, "moment")
+	if err != nil {
+		sendMessageToUser(ctx, b, "Sorry, failed to generate moment/detail ruminations response.")
+		return
+	}
+	logger.Info("Generated Moment Rumination Response.", "Response", response)
+
 	sendMessageToUser(ctx, b, "Amazing news! Moment has been memorized forever!")
+	sendMessageToUser(ctx, b, response)
 	logger.Info("Add Moment handler finished successfully.", "Moment added", userText)
 }
 
@@ -177,7 +193,7 @@ func randomNuggetHandler(ctx context.Context, b *bot.Bot) {
 		sendMessageToUser(ctx, b, "Sorry, failed to generate chat response.")
 		return
 	}
-	logger.Info("Generated Chat Response.", "Response", response)
+	logger.Info("Generated Random Nugget Response.", "Response", response)
 
 	infoMsg := fmt.Sprintf("Getting random nugget from:\nDetail:%s\nMoment:%s", detailsResult, momentsResult)
 	sendMessageToUser(ctx, b, infoMsg)
